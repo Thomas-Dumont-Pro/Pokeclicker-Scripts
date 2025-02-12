@@ -29,31 +29,39 @@ var itemThreshold;
 
 function initAutoMine() {
     const minerHTML = document.createElement("div");
-    minerHTML.innerHTML = `<button id="auto-mine-start" class="col-12 col-md-2 btn btn-${mineState ? 'success' : 'danger'}">Auto Mine [${mineState ? 'ON' : 'OFF'}]</button>
-<button id="small-restore-start" class="col-12 col-md-3 btn btn-${smallRestoreState ? 'success' : 'danger'}">Auto Small Restore [${smallRestoreState ? 'ON' : 'OFF'}]</button>
-<div id="threshold-input" class="col-12 col-md-3 btn-secondary"><img title="Money" src="assets/images/currency/money.svg" height="25px">
-<input title="Value at which to stop buying Small Restores." type="text" id="small-restore"></div>
-<select id="treasure-hunter" class="col-12 col-md-2 btn">
-  <option value="-1">All Items</option>
-  <option value="0">Fossils</option>
-  <option value="1">Evolution Items</option>
-  <option value="2">Gem Plates</option>
-  <option value="3">Shards</option>
-  <option value="4">Mega Stones</option>
-  <option value="5">Diamond Value</option>
-</select>
-<div id="item-threshold-input" class="col-12 col-md-2 btn-secondary"><img id="treasure-image" src="assets/images/currency/money.svg" height="25px">
-<input title="Skips layers with fewer target items than this value." type="text" id="item-threshold"></div>`
-    document.querySelectorAll('#mineBody + div')[0].prepend(minerHTML);
-    $("#auto-mine-start").unwrap();
+    minerHTML.innerHTML = `
+    <div id="auto-mine-container" class="row">
+            <button id="auto-mine-start" class="col-12 col-md-2 btn btn-${mineState ? 'success' : 'danger'}">Auto Mine [${mineState ? 'ON' : 'OFF'}]</button>
+            <button id="small-restore-start" class="col-12 col-md-3 btn btn-${smallRestoreState ? 'success' : 'danger'}">Auto Small Restore [${smallRestoreState ? 'ON' : 'OFF'}]</button>
+        <div id="threshold-input" class="col-12 col-md-3 btn-secondary">
+            <img title="Money" src="assets/images/currency/money.svg" height="25px">
+            <input title="Value at which to stop buying Small Restores." type="text" id="small-restore">
+        </div>
+        <select id="treasure-hunter" class="col-12 col-md-2 btn">
+            <option value="-1">All Items</option>
+            <option value="0">Fossils</option>
+            <option value="1">Evolution Items</option>
+            <option value="2">Gem Plates</option>
+            <option value="3">Shards</option>
+            <option value="4">Mega Stones</option>
+            <option value="5">Diamond Value</option>
+        </select>
+        <div id="item-threshold-input" class="col-12 col-md-2 btn-secondary">
+            <img id="treasure-image" src="assets/images/currency/money.svg" height="25px">
+            <input title="Skips layers with fewer target items than this value." type="text" id="item-threshold">
+        </div>
+    </div>`
+    document.querySelectorAll('#mineBody')[0].parentNode.prepend(minerHTML);
+    //$("#auto-mine-start").unwrap();
     document.getElementById('small-restore').value = setThreshold.toLocaleString('en-US');
     document.getElementById('treasure-hunter').value = treasureHunter;
     document.getElementById('item-threshold').value = itemThreshold.toLocaleString('en-US');
     setTreasureImage();
     const autoSeller = document.createElement("div");
-    autoSeller.innerHTML = `<div>
-    <button id="auto-sell-treasure" class="col-12 col-md-3 btn btn-${sellTreasureState ? 'success' : 'danger'}">Auto Sell Treasure [${sellTreasureState ? 'ON' : 'OFF'}]</button>
-</div>`
+    autoSeller.innerHTML = `
+    <div>
+        <button id="auto-sell-treasure" class="col-12 col-md-3 btn btn-${sellTreasureState ? 'success' : 'danger'}">Auto Sell Treasure [${sellTreasureState ? 'ON' : 'OFF'}]</button>
+    </div>`
     document.getElementById('treasures').prepend(autoSeller);
 
     document.getElementById('auto-mine-start').addEventListener('click', event => { startAutoMine(event); });
