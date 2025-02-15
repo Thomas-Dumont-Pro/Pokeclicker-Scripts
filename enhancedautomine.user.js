@@ -18,51 +18,146 @@
 // @run-at        document-idle
 // ==/UserScript==
 
-var mineState;
-var smallRestoreState;
+
 var setThreshold;
 var autoMineTimer;
 var layersMined;
-var sellTreasureState;
 var treasureHunter;
 var itemThreshold;
 
+class AutoMiner{
+
+    static #sellTreasureState = this.#setLocalStore('autoSellTreasure',false);
+    static #mineState = this.#setLocalStore('autoMineState',false);
+    static #smallRestoreState = this.#setLocalStore('autoSmallRestore',false);
+
+    /**
+     * Verify if the value is set in local storage and if not, set it
+     * @param {string} key The key to check in local storage
+     * @param {*} value The value to set in local storage 
+     * @returns {*} The value in local storage
+     */
+    static #setLocalStore(key, value){
+        function validParse(key) {
+            try {
+                if (key === null) {
+                    throw new Error;
+                }
+                JSON.parse(key);
+                return true;
+            } catch (e) {
+                return false;
+            }
+        }
+        if (!validParse(localStorage.getItem(key))) {
+            localStorage.setItem(key, value);
+        }
+        return JSON.parse(localStorage.getItem(key));
+    }
+
+    /**
+     * Parent class to determine where the button will be displayed
+     */
+    static #Parent = {
+        Header:0,
+        Card:1
+    }
+
+    /**
+     * Display the Auto Mine button in the header
+     */
+    static #displayAutoMineHeaderButton(){
+        document.querySelector('#undergroundDisplay').prepend(this.#autoMineStartButton(this.#Parent.Header));
+    }
+
+    /**
+     * Display the Auto Mine card with the buttons to toggle the Auto Mine and Auto Restore features
+     */
+    static #displayAutoMineCard(){
+        const container = document.createElement('div');
+        container.id = 'auto-mine-container';
+        container.style = 'background-color: rgba(0,0,0,.03);';
+        container.appendChild(this.#autoMineStartButton(this.#Parent.Card));
+        container.appendChild(this.#autoRestoreButton());
+        document.querySelector("#dig > div > .card").prepend(container);
+    }
+
+    /**
+     * Create the button for the Auto Mine feature
+     * @param {#Parent} parent where the button will be displayed
+     * @returns the button to toggle the Auto Mine feature
+     */
+    static #autoMineStartButton(parent){
+        const button = document.createElement('button');
+        button.id = 'auto-mine-start';
+        if(parent == this.#Parent.Header){    
+            button.className = `col-3 btn btn-${this.#mineState ? 'success' : 'danger'}`;
+            button.style = 'position: absolute; top: 0px; left: 0px; width: auto; height: 41px; font-size: 9px;';
+        }
+        else if(parent == this.#Parent.Card){
+            button.className = `col-12 col-md-2 btn btn-${this.#mineState ? 'success' : 'danger'}`;
+        }
+
+        button.textContent = `Auto Mine [${this.#mineState ? 'ON' : 'OFF'}]`;
+        //button.addEventListener('click', startAutoMine);
+        return button;
+    }
+
+    /**
+     * Create the button for the Auto Restore feature
+     * @returns {HTMLButtonElement} The button to toggle the Auto Restore feature
+     */
+    static #autoRestoreButton(){
+        const button = document.createElement('button');
+        button.id = 'small-restore-start';
+        button.className = `col-12 col-md-3 btn btn-${this.#smallRestoreState ? 'success' : 'danger'}`;
+        button.textContent = `Auto Small Restore [${this.#smallRestoreState ? 'ON' : 'OFF'}]`;
+        //button.addEventListener('click', startAutoRestore);
+        return button;
+    }
+
+    /**
+     * Display the button to toggle the Auto Sell Treasure feature
+     */
+    static #displayAutoSellTreasureButton(){
+        //Creating the button
+        const autoSellButton = document.createElement('button');
+        autoSellButton.id = 'auto-sell-treasure';
+        autoSellButton.className = `col-12 col-md-3 btn btn-${this.#sellTreasureState ? 'success' : 'danger'}`;
+        autoSellButton.textContent = `Auto Sell Treasure [${this.#sellTreasureState ? 'ON' : 'OFF'}]`;
+        
+        //Creating the card header to hold the button
+        const autoSellerHeader = document.createElement("div");
+        autoSellerHeader.className = 'card-header';
+        autoSellerHeader.appendChild(autoSellButton);
+
+        //Creating the card to hold the header
+        const autoSellerContainer = document.createElement("div");
+        autoSellerContainer.className = 'card';
+        autoSellerContainer.appendChild(autoSellerHeader);
+
+        //Appending the card to the parent
+        document.getElementById('treasures').prepend(autoSellerContainer);
+    }
+
+    /**
+     * Initialize the Auto Mine feature
+     */
+    static initAutoMine(){
+        this.#displayAutoMineHeaderButton();
+        this.#displayAutoMineCard();
+        this.#displayAutoSellTreasureButton();
+    }
+}
+
+
+//Legacy code
+
 function initAutoMine() {
-    const minerHTML = document.createElement("div");
-    minerHTML.innerHTML = `
-    <div id="auto-mine-container" class="row">
-            <button id="auto-mine-start" class="col-12 col-md-2 btn btn-${mineState ? 'success' : 'danger'}">Auto Mine [${mineState ? 'ON' : 'OFF'}]</button>
-            <button id="small-restore-start" class="col-12 col-md-3 btn btn-${smallRestoreState ? 'success' : 'danger'}">Auto Small Restore [${smallRestoreState ? 'ON' : 'OFF'}]</button>
-        <div id="threshold-input" class="col-12 col-md-3 btn-secondary">
-            <img title="Money" src="assets/images/currency/money.svg" height="25px">
-            <input title="Value at which to stop buying Small Restores." type="text" id="small-restore">
-        </div>
-        <select id="treasure-hunter" class="col-12 col-md-2 btn">
-            <option value="-1">All Items</option>
-            <option value="0">Fossils</option>
-            <option value="1">Evolution Items</option>
-            <option value="2">Gem Plates</option>
-            <option value="3">Shards</option>
-            <option value="4">Mega Stones</option>
-            <option value="5">Diamond Value</option>
-        </select>
-        <div id="item-threshold-input" class="col-12 col-md-2 btn-secondary">
-            <img id="treasure-image" src="assets/images/currency/money.svg" height="25px">
-            <input title="Skips layers with fewer target items than this value." type="text" id="item-threshold">
-        </div>
-    </div>`
-    document.querySelectorAll('#mineBody')[0].parentNode.prepend(minerHTML);
-    //$("#auto-mine-start").unwrap();
     document.getElementById('small-restore').value = setThreshold.toLocaleString('en-US');
     document.getElementById('treasure-hunter').value = treasureHunter;
     document.getElementById('item-threshold').value = itemThreshold.toLocaleString('en-US');
     setTreasureImage();
-    const autoSeller = document.createElement("div");
-    autoSeller.innerHTML = `
-    <div>
-        <button id="auto-sell-treasure" class="col-12 col-md-3 btn btn-${sellTreasureState ? 'success' : 'danger'}">Auto Sell Treasure [${sellTreasureState ? 'ON' : 'OFF'}]</button>
-    </div>`
-    document.getElementById('treasures').prepend(autoSeller);
 
     document.getElementById('auto-mine-start').addEventListener('click', event => { startAutoMine(event); });
     document.getElementById('small-restore-start').addEventListener('click', event => { autoRestore(event); });
@@ -251,9 +346,7 @@ function setTreasureImage() {
     document.getElementById('treasure-image').title = imageTitles[1 + treasureHunter];
 }
 
-if (!validParse(localStorage.getItem('autoMineState'))) {
-    localStorage.setItem("autoMineState", false);
-}
+
 if (!validParse(localStorage.getItem('autoSmallRestore'))) {
     localStorage.setItem("autoSmallRestore", false);
 }
@@ -269,24 +362,12 @@ if (!validParse(localStorage.getItem('treasureHunter'))) {
 if (!validParse(localStorage.getItem('itemThreshold'))) {
     localStorage.setItem("itemThreshold", 0);
 }
-mineState = JSON.parse(localStorage.getItem('autoMineState'));
-smallRestoreState = JSON.parse(localStorage.getItem('autoSmallRestore'));
+
 setThreshold = JSON.parse(localStorage.getItem('autoBuyThreshold'));
 sellTreasureState = JSON.parse(localStorage.getItem('autoSellTreasure'));
 treasureHunter = JSON.parse(localStorage.getItem('treasureHunter'));
 itemThreshold = JSON.parse(localStorage.getItem('itemThreshold'));
 
-function validParse(key) {
-    try {
-        if (key === null) {
-            throw new Error;
-        }
-        JSON.parse(key);
-        return true;
-    } catch (e) {
-        return false;
-    }
-}
 
 function addGlobalStyle(css) {
     var head, style;
