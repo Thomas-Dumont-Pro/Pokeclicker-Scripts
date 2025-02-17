@@ -19,33 +19,11 @@
 // ==/UserScript==
 
 class AutoMiner {
-    static sellTreasureState = this.#getLocalStore("autoSellTreasure", false);
-    static mineState = this.#getLocalStore("autoMineState", false);
-    static smallRestoreState = this.#getLocalStore("autoRestore", false);
+    static autoSellInterval;
 
-    /**
-     * Verify if the value is set in local storage and if not, set it
-     * @param {string} key The key to check in local storage
-     * @param {*} value The value to set in local storage
-     * @returns {*} The value in local storage
-     */
-    static #getLocalStore(key, value) {
-        function validParse(key) {
-            try {
-                if (key === null) {
-                    throw new Error();
-                }
-                JSON.parse(key);
-                return true;
-            } catch (e) {
-                return false;
-            }
-        }
-        if (!validParse(localStorage.getItem(key))) {
-            localStorage.setItem(key, value);
-        }
-        return JSON.parse(localStorage.getItem(key));
-    }
+    static sellTreasureState = ko.observable(validateStorage("autoSellTreasure", false));
+    static mineState = ko.observable(validateStorage("autoMineState", false));
+    static autoRestoreState = ko.observable(validateStorage("autoRestore", false));
 
     /**
      * Parent class to determine where the button will be displayed
@@ -85,16 +63,16 @@ class AutoMiner {
         const button = document.createElement("button");
         button.id = "auto-mine-start";
         if (parent == this.#Parent.Header) {
-            button.className = `col-3 btn btn-${this.mineState ? "success" : "danger"
+            button.className = `col-3 btn btn-${AutoMiner.mineState() ? "success" : "danger"
                 }`;
             button.style =
                 "position: absolute; top: 0px; left: 0px; width: auto; height: 41px; font-size: 9px;";
         } else if (parent == this.#Parent.Card) {
-            button.className = `col-12 col-md-2 btn btn-${this.mineState ? "success" : "danger"
+            button.className = `col-12 col-md-2 btn btn-${AutoMiner.mineState() ? "success" : "danger"
                 }`;
         }
 
-        button.textContent = `Auto Mine [${this.mineState ? "ON" : "OFF"}]`;
+        button.textContent = `Auto Mine [${AutoMiner.mineState() ? "ON" : "OFF"}]`;
         button.addEventListener('click', this.#autoMineEventListener);
         return button;
     }
@@ -106,9 +84,9 @@ class AutoMiner {
     static #autoRestoreButton() {
         const button = document.createElement("button");
         button.id = "small-restore-start";
-        button.className = `col-12 col-md-3 btn btn-${this.smallRestoreState ? "success" : "danger"
+        button.className = `col-12 col-md-3 btn btn-${AutoMiner.autoRestoreState() ? "success" : "danger"
             }`;
-        button.textContent = `Auto Restore [${this.smallRestoreState ? "ON" : "OFF"
+        button.textContent = `Auto Restore [${AutoMiner.autoRestoreState() ? "ON" : "OFF"
             }]`;
         button.addEventListener("click", this.#autoRestoreEventListener);
         return button;
@@ -121,9 +99,9 @@ class AutoMiner {
         //Creating the button
         const autoSellButton = document.createElement("button");
         autoSellButton.id = "auto-sell-treasure";
-        autoSellButton.className = `col-12 col-md-3 btn btn-${this.sellTreasureState ? "success" : "danger"
+        autoSellButton.className = `col-12 col-md-3 btn btn-${AutoMiner.sellTreasureState() ? "success" : "danger"
             }`;
-        autoSellButton.textContent = `Auto Sell Treasure [${this.sellTreasureState ? "ON" : "OFF"
+        autoSellButton.textContent = `Auto Sell Treasure [${AutoMiner.sellTreasureState() ? "ON" : "OFF"
             }]`;
         autoSellButton.addEventListener("click", this.#autoSellTreasureEventListener);
 
@@ -156,10 +134,10 @@ class AutoMiner {
      */
     static #autoMineEventListener(event){
         const element = event.target;
-        this.mineState = !this.mineState;
-        this.mineState ? element.classList.replace("btn-danger", "btn-success") : element.classList.replace("btn-success", "btn-danger");
-        element.textContent = `Auto Mine [${this.mineState ? "ON" : "OFF"}]`;
-        localStorage.setItem("autoMineState", this.mineState);
+        AutoMiner.mineState(!AutoMiner.mineState()) ;
+        AutoMiner.mineState() ? element.classList.replace("btn-danger", "btn-success") : element.classList.replace("btn-success", "btn-danger");
+        element.textContent = `Auto Mine [${AutoMiner.mineState() ? "ON" : "OFF"}]`;
+        localStorage.setItem("autoMineState", AutoMiner.mineState());
     }
 
     /**
@@ -169,13 +147,13 @@ class AutoMiner {
      */
     static #autoRestoreEventListener(event) {
         const element = event.target;
-        this.smallRestoreState = !this.smallRestoreState;
-        this.smallRestoreState
+        AutoMiner.autoRestoreState(!AutoMiner.autoRestoreState());
+        AutoMiner.autoRestoreState()
             ? element.classList.replace("btn-danger", "btn-success")
             : element.classList.replace("btn-success", "btn-danger");
-        element.textContent = `Auto Restore [${this.smallRestoreState ? "ON" : "OFF"
+        element.textContent = `Auto Restore [${AutoMiner.autoRestoreState() ? "ON" : "OFF"
             }]`;
-        localStorage.setItem("autoRestore", this.smallRestoreState);
+        localStorage.setItem("autoRestore", AutoMiner.autoRestoreState());
     }
 
     /**
@@ -184,14 +162,55 @@ class AutoMiner {
      * @param {*} event Click event
      */
     static #autoSellTreasureEventListener(event) {
-        const element = event.target;
-        this.sellTreasureState = !this.sellTreasureState;
-        this.sellTreasureState
-            ? element.classList.replace("btn-danger", "btn-success")
-            : element.classList.replace("btn-success", "btn-danger");
-        element.textContent = `Auto Sell Treasure [${this.sellTreasureState ? "ON" : "OFF"
-            }]`;
-        localStorage.setItem("autoSellTreasure", this.sellTreasureState);
+        function changeDisplay(event){
+            const element = event.target;
+            AutoMiner.sellTreasureState(!AutoMiner.sellTreasureState()) ;
+            AutoMiner.sellTreasureState()
+                ? element.classList.replace("btn-danger", "btn-success")
+                : element.classList.replace("btn-success", "btn-danger");
+            element.textContent = `Auto Sell Treasure [${AutoMiner.sellTreasureState() ? "ON" : "OFF"
+                }]`;
+            localStorage.setItem("autoSellTreasure", AutoMiner.sellTreasureState());
+        }
+        function sellAllMineItems() {
+            AutoMiner.autoSellInterval = setInterval(function () {
+                UndergroundItems.getUnlockedItems()
+                .filter((item) => item.valueType === UndergroundItemValueType.Diamond)
+                .forEach(item => {
+                    UndergroundTrading.SelectedTradeFromIten = item;
+                    UndergroundTrading.SellAmount = player.itemList[item.itemName]();
+                    if(UndergroundTrading.canSell)
+                        UndergroundTrading.sell();
+                }); 
+            }, 1000);
+        }
+        changeDisplay(event);
+        if (AutoMiner.sellTreasureState()) {
+            sellAllMineItems();
+        } else {
+            clearInterval(AutoMiner.autoSellInterval);
+        }
+    }
+}
+
+function validateStorage(key, defaultVal, allowed) {
+    try {
+        var val = localStorage.getItem(key);
+        val = JSON.parse(val);
+        if (val == null || typeof val !== typeof defaultVal || (typeof val == 'object' && val.constructor.name !== defaultVal.constructor.name)) {
+            return defaultVal;
+        }
+        if (allowed != undefined) {
+            if (Array.isArray(allowed) && !allowed.includes(val)) {
+                return defaultVal;
+            }
+            if (allowed instanceof Function && !allowed(val)) {
+                return defaultVal;
+            }
+        }
+        return val;
+    } catch {
+        return defaultVal;
     }
 }
 
@@ -437,7 +456,6 @@ function doAutoMine() {
 }
 
 setThreshold = JSON.parse(localStorage.getItem("autoBuyThreshold"));
-sellTreasureState = JSON.parse(localStorage.getItem("autoSellTreasure"));
 treasureHunter = JSON.parse(localStorage.getItem("treasureHunter"));
 itemThreshold = JSON.parse(localStorage.getItem("itemThreshold"));
 
